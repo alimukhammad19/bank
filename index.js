@@ -13,7 +13,7 @@ app.get('/search', (req, res) => {
     const { id, district } = req.query; // So'rovdan ID va tuman olinadi
 
     // Excel faylini yuklash
-    const workbook = xlsx.readFile('./public/data.xlsx');
+    const workbook = xlsx.readFile(path.resolve(__dirname, 'public/data.xlsx'));
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
 

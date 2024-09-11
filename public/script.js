@@ -21,6 +21,7 @@
                         resultDiv.innerHTML = '<p>Hech qanday qarzdor topilmadi.</p>';
                     }
                 });
+                
         }
 
         // ID bo'yicha qidiruv funksiyasi
