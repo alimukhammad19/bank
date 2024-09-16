@@ -1,61 +1,4 @@
- function searchByDistrict(district) {
-            fetch(`/search?district=${district}`)
-                .then(response => response.json())
-                .then(data => {
-                    const resultDiv = document.getElementById('result');
-                    resultDiv.innerHTML = '<h4>Qarzdorlar:</h4>';
-                    if (data.length > 0) {
-                        data.forEach(row => {
-                            resultDiv.innerHTML += `
-                                <div class="card">
-                                    <p><strong>Ismi:</strong> ${row.Ismi}</p>
-                                    <p><strong>Telefon:</strong> ${row.Telefoni}</p>
-                                    <p><strong>Id:</strong> ${row.Id}</p>
-                                    <p><strong>Qarzi:</strong> ${row.Qarzi}</p>
-                                    <p><strong>Qarzdorligi:</strong> ${row.Qarzdorlik}</p>
-                                    <p><strong>Tuman:</strong> ${row.Tuman}</p>
-                                    <p><strong>Manzili:</strong> ${row.Manzili}</p>
-                                </div>`;
-                        });
-                    } else {
-                        resultDiv.innerHTML = '<p>Hech qanday qarzdor topilmadi.</p>';
-                    }
-                });
-                
-        }
-
-        // ID bo'yicha qidiruv funksiyasi
-        function searchById() {
-            const id = document.getElementById('search-id').value;
-            fetch(`/search?id=${id}`)
-                .then(response => response.json())
-                .then(data => {
-                    const resultDiv = document.getElementById('result');
-                    resultDiv.innerHTML = ''; // Oldingi natijalarni tozalash
-                    if (data.length > 0) {
-                        data.forEach(row => {
-                            resultDiv.innerHTML += `
-                                <div class="card">
-                                    <p><strong>Ismi:</strong> ${row.Ismi}</p>
-                                    <p><strong>Telefon:</strong> ${row.Telefoni}</p>
-                                    <p><strong>Id:</strong> ${row.Id}</p>
-                                    <p><strong>Qarzi:</strong> ${row.Qarzi}</p>
-                                    <p><strong>Qarzdorligi:</strong> ${row.Qarzdorlik}</p>
-                                    <p><strong>Tuman:</strong> ${row.Tuman}</p>
-                                    <p><strong>Manzili:</strong> ${row.Manzili}</p>
-                                </div>`;
-                        });
-                    } else {
-                        resultDiv.innerHTML = '<p>Hech qanday natija topilmadi.</p>';
-                    }
-                });
-        }
-
-        
-
-
-
-        // Initialize visible sections
+// Initialize visible sections
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.hero').style.display = 'block';
     document.querySelector('.search-page').style.display = 'none';
@@ -87,6 +30,9 @@ function prevSlide() {
 
 document.querySelector('.carousel-control.next').addEventListener('click', nextSlide);
 document.querySelector('.carousel-control.prev').addEventListener('click', prevSlide);
+
+// Optional: Auto-slide
+setInterval(nextSlide, 5000); // Change slide every 5 seconds
 
 // Footer icon functionality
 const homeSection = document.querySelector('.hero');
@@ -157,102 +103,80 @@ closeSearchIsmBtn.addEventListener('click', () => {
     searchIsm.style.display = 'none';
     searchPage.style.display = 'block';
 });
-let currentIndex = 0;
 
-function showSlide(index) {
-    const slides = document.querySelectorAll('.carousel-item');
-    const totalSlides = slides.length;
-
-    if (index >= totalSlides) {
-        currentIndex = 0;
-    } else if (index < 0) {
-        currentIndex = totalSlides - 1;
-    } else {
-        currentIndex = index;
+/// Excel faylini yuklash va uni qayta ishlash
+async function loadExcelData() {
+    try {
+        const response = await fetch('/public/data.xlsx'); // To'g'ri yo'lni yangilang
+        const data = await response.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        return jsonData;
+    } catch (error) {
+        console.error('Excel faylini yuklashda xato:', error);
     }
 }
 
-function nextSlide() {
-    showSlide(currentIndex + 1);
+// Ma'lumotlarni ko'rsatish
+function displayData(data) {
+    const resultDiv = document.getElementById('result');
+    resultDiv.innerHTML = '<h4>Ma\'lumotlar:</h4>';
+    
+    data.forEach((row, index) => {
+        if (index === 0) {
+            // Sarlavha qatorini o'tkazib yuborish
+            return;
+        }
+        
+        resultDiv.innerHTML += `
+            <div class="card">
+                <p><strong>Ismi:</strong> ${row[0]}</p>
+                <p><strong>Telefon:</strong> ${row[1]}</p>
+                <p><strong>ID:</strong> ${row[2]}</p>
+                <p><strong>Qarzi:</strong> ${row[3]}</p>
+                <p><strong>Qarzdorligi:</strong> ${row[4]}</p>
+                <p><strong>Tuman:</strong> ${row[5]}</p>
+                <p><strong>Manzili:</strong> ${row[6]}</p>
+            </div>`;
+    });
 }
 
-function prevSlide() {
-    showSlide(currentIndex - 1);
+// Tuman bo'yicha qidiruv
+async function searchByDistrict(district) {
+    const data = await loadExcelData();
+    if (data) {
+        const filteredData = data.filter(row => row[5] === district && row[4] > 0); // Qarzdorligi 0 dan katta bo'lganlarni tanlash
+        displayData(filteredData);
+    }
 }
 
-// Optional: Auto-slide
-setInterval(nextSlide, 5000); // Change slide every 5 seconds
+// ID bo'yicha qidiruv
+async function searchById() {
+    const searchId = document.getElementById('search-id').value.trim();
+    if (!searchId) {
+        alert('ID raqamini kiriting.');
+        return;
+    }
+    const data = await loadExcelData();
+    if (data) {
+        const foundData = data.find(row => row[2] == searchId);
+        if (foundData) {
+            displayData([foundData]);
+        } else {
+            document.getElementById('result').innerHTML = '<p>ID raqami topilmadi.</p>';
+        }
+    }
+}
 
-document.querySelectorAll('.open-link').forEach(link => {
-    link.addEventListener('click', function(event) {
-        event.preventDefault(); // Havolaning asl funksiyasini o'chiradi
-
-        const url = this.getAttribute('data-url');
-
-        // Yashirish va ko'rsatish funksiyalari
-        document.querySelectorAll('.link-1').forEach(linkDiv => linkDiv.classList.remove('visible'));
-        document.querySelector('.back-button').classList.add('visible');
-
-        // Yangi sahifa yoki kontent ko'rsatish (bu yerda faqat havola ochiladi)
-        window.open(url, '_blank'); // Havolani yangi oynada ochish
+// Tuman tanlanganida qidiruv
+document.querySelectorAll('.district-buttons button').forEach(button => {
+    button.addEventListener('click', function() {
+        const selectedDistrict = this.innerText; // Tugma matnidan tumanni olish
+        searchByDistrict(selectedDistrict);
     });
 });
 
-document.getElementById('backButton').addEventListener('click', function() {
-    // Orqaga qaytish funksiyasi
-    document.querySelectorAll('.link-1').forEach(linkDiv => linkDiv.classList.add('visible'));
-    this.classList.remove('visible');
-});
-
-function searchData() {
-    const name = document.getElementById('search').value;
-
-    fetch(`/search?name=${name}`)
-        .then(response => response.json())
-        .then(data => {
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = ''; // Clear old results
-            if (data.length > 0) {
-                data.forEach(row => {
-                    resultDiv.innerHTML += `<p>Ismi: ${row.Ismi}, <br> Telefoni: ${row.Telefoni}, <br> Jami olgan qarzi: ${row.Qarzi}, <br> Qarzdorlik: ${row.Qarzdorlik},<br>  Tuman: ${row.Tuman},<br> Manzili: ${row.Manzili}</p>`;
-                });
-            } else {
-                resultDiv.innerHTML = '<p>No results found</p>';
-            }
-        });
-}
-
-
-const express = require('express');
-const xlsx = require('xlsx');
-const path = require('path');
-
-const app = express();
-const PORT = 3000;
-
-// Statik fayllarni ulash
-app.use(express.static('project'));
-
-// Excel faylini o'qish va filterlash
-app.get('/search', (req, res) => {
-    const query = req.query.name.toLowerCase();
-    
-    // Excel faylini yuklash
-    const workbook = xlsx.readFile('/project/qarzdorlar.xlsx');
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-
-    // Excelni JSON formatiga o'tkazish
-    const data = xlsx.utils.sheet_to_json(worksheet);
-
-    // Filterlash
-    const result = data.filter(row => row.Name.toLowerCase().includes(query));
-    
-    // JSON formatida javob qaytarish
-    res.json(result);
-});
-
-// Serverni ishga tushirish
-app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
-});
+// ID bo'yicha qidirish tugmasiga hodisa qo'shish
+document.querySelector('.search-page button').addEventListener('click', searchById);
